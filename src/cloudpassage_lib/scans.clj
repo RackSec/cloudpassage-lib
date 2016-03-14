@@ -6,8 +6,6 @@
    [manifold.stream :as ms]
    [aleph.http :as http]
    [manifold.deferred :as md]
-   [manifold.stream :as ms]
-   [environ.core :refer [env]]
    [cloudpassage-lib.core :as cpc]
    [taoensso.timbre :as timbre :refer [info spy]]
    [clj-time.core :as t :refer [hours ago]]
@@ -56,7 +54,7 @@
 (defn get-page!
   "Gets a page, and handles auth for you."
   [client-id client-secret url]
-  (let [token (cpc/fetch-token! client-id client-secret (:fernet-key env))]
+  (let [token (cpc/fetch-token! client-id client-secret (:fernet-key cpc/conf))]
     (cpc/get-single-events-page! token url)))
 
 (defn scans!

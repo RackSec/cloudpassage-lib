@@ -2,7 +2,7 @@
   (:require
    [clojure.string :as str]
    [aleph.http :as http]
-   [environ.core :refer [env]]
+   [environ.core :as env-core]
    [manifold.deferred :as md]
    [manifold.time :as mt]
    [byte-streams :as bs]
@@ -14,13 +14,35 @@
    [cloudpassage-lib.fernet :as fernet]
    [cheshire.core :as json]))
 
+; environ.core/env allows nil punning, but for these config values we
+; don't want that, so we wrap it with a map like that enforces non-nils.
+
+(defn env-get
+  "Checks that values are set before retrieving."
+  [key-name]
+  (let [value (key-name env-core/env)]
+    (if (seq value)
+      value
+      (throw (Exception. (str "Key " key-name " not set."))))))
+
+(deftype CheckEnv
+         []
+  clojure.lang.ILookup
+  (valAt [this k not-found]
+    (env-get k))
+  (valAt [this k]
+    (.valAt this k nil)))
+
+(def conf (CheckEnv.))
+
 ;; the url from which new auth-tokens can be obtained.
 (def auth-uri "https://api.cloudpassage.com/oauth/access_token?grant_type=client_credentials")
 (def events-uri "https://api.cloudpassage.com/v1/events?")
 
 (defn redis-connection
+  "Reads environment vars, returns map with connection details."
   []
-  (let [{:keys [redis-url redis-timeout]} env]
+  (let [{:keys [redis-url redis-timeout]} conf]
     {:pool {}
      :spec {:uri redis-url
             :timeout (read-string redis-timeout)}}))
