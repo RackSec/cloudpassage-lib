@@ -107,21 +107,19 @@
 
 (defn ^:private report-for-module!
   "Get recent report data for a certain client, and filter based on module."
-  [client-id client-secret module-name]
-  ;; The docs say we can use "module" as a query parameter but it does
-  ;; not work for FIM or SVM, so we have to filter out those items instead.
-  (let [opts {"since" (cpc/->cp-date (-> 3 hours ago))}]
+  [module-name client-id client-secret hours-ago]
+  (let [opts {"since" (cpc/->cp-date (-> hours-ago hours ago))
+              "module" module-name}]
     (->> (scans! client-id client-secret opts)
-         (ms/filter (fn [{:keys [module]}] (= module module-name)))
          (scans-with-details! client-id client-secret)
          ms/stream->seq)))
 
 (defn fim-report!
   "Get the current (recent) FIM report for a particular client."
   [client-id client-secret]
-  (report-for-module! client-id client-secret "fim"))
+  (report-for-module! "fim" client-id client-secret 2))
 
 (defn svm-report!
   "Get the current (recent) SVM report for a particular client."
   [client-id client-secret]
-  (report-for-module! client-id client-secret "svm"))
+  (report-for-module! "svm" client-id client-secret 48))
