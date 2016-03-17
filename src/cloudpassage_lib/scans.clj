@@ -12,6 +12,8 @@
    [taoensso.timbre :as timbre :refer [info spy]]
    [clj-time.core :as t :refer [hours ago]]
    [clj-time.format :as tf]
+   [camel-snake-kebab.core :as cskc]
+   [camel-snake-kebab.extras :as cske]
    [clojure.java.io :as io]))
 
 (def ^:private base-scans-url
@@ -114,6 +116,7 @@
     (->> (scans! client-id client-secret opts)
          (ms/filter (fn [{:keys [module]}] (= module module-name)))
          (scans-with-details! client-id client-secret)
+         (ms/map #(cske/transform-keys cskc/->kebab-case-keyword %))
          ms/stream->seq)))
 
 (defn fim-report!

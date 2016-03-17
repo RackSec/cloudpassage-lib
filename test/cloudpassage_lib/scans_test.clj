@@ -159,4 +159,3 @@
 
 (deftest sca-report!-tests
   (test-report scans/sca-report! "sca"))
-
