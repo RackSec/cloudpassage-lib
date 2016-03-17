@@ -73,12 +73,12 @@
                   (fn [response]
                     (let [{:keys [pagination scans]} response
                           next-url (:next pagination)]
+                      (ms/put-all! scans-stream scans)
                       (if (or (= "" next-url) (nil? next-url))
                         (do (info "no more urls to fetch")
                             (ms/close! urls-stream)
                             (ms/close! scans-stream))
-                        (ms/put! urls-stream next-url))
-                      (ms/put-all! scans-stream scans)))))]
+                        (ms/put! urls-stream next-url))))))]
     (ms/put! urls-stream (scans-url opts))
     (ms/consume-async shovel urls-stream)
     scans-stream))
