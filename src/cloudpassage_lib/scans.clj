@@ -23,6 +23,9 @@
 (def ^:private scans-path
   (partial str "/v1/scans/"))
 
+(def ^:private base-servers-url
+  "https://api.cloudpassage.com/v1/servers/")
+
 (defn ^:private maybe-flatten-list
   [maybe-list]
   (if (or (string? maybe-list) (nil? maybe-list))
@@ -37,6 +40,11 @@
      (-> (u/url url)
          (update :query merge opts)
          str))))
+
+(defn ^:private scan-server-url
+  "URL for fetching most recent scan results of a server."
+  [server-id module]
+  (str (u/url "https://api.cloudpassage.com/v1/servers/" server-id module)))
 
 (defn ^:private scans-detail-url
   "Compute the URL for a scan detail."
@@ -94,6 +102,11 @@
   [client-id client-secret opts]
   (stream-paginated-resources! client-id client-secret (scans-url opts) :scans))
 
+(defn list-servers!
+  "Returns a stream of servers for the given account."
+  [client-id client-secret]
+  (stream-paginated-resources! client-id client-secret base-servers-url :servers))
+
 (defn scans-with-details!
   "Returns a stream of historical scan results with their details.
 
@@ -114,17 +127,36 @@
      scans-with-details-stream)
     scans-with-details-stream))
 
+(defn scan-server
+  [client-id client-secret server-id module]
+  (let [url (scan-server-url server-id module)]
+    (get-page! client-id client-secret url)))
+
+(defn scan-each-server!
+  "Given a stream of servers, returns a stream of scan data for each server."
+  [client-id client-secret module servers-stream]
+  (let [server-details-stream (ms/stream 10)]
+    (ms/connect-via
+     servers-stream
+     (fn [{:keys [id]}]
+       (md/chain
+        (scan-server client-id client-secret id module)
+        (fn [response]
+          (if (cpc/page-response-ok? response)
+            (ms/put! server-details-stream response)
+            (error "Error getting scans for server " id)))))
+     server-details-stream)
+    server-details-stream))
+
 (defn ^:private report-for-module!
   "Get recent report data for a certain client, and filter based on module."
   [client-id client-secret module-name]
   ;; The docs say we can use "module" as a query parameter but it does
   ;; not work for FIM or SVM, so we have to filter out those items instead.
-  (let [opts {"since" (cpc/->cp-date (-> 3 hours ago))}]
-    (->> (scans! client-id client-secret opts)
-         (ms/filter (fn [{:keys [module]}] (= module module-name)))
-         (scans-with-details! client-id client-secret)
-         (ms/map #(cske/transform-keys cskc/->kebab-case-keyword %))
-         ms/stream->seq)))
+  (->> (list-servers! client-id client-secret)
+       (scan-each-server! client-id client-secret module-name)
+       (ms/map #(cske/transform-keys cskc/->kebab-case-keyword %))
+       ms/stream->seq))
 
 (defn fim-report!
   "Get the current (recent) FIM report for a particular client."
