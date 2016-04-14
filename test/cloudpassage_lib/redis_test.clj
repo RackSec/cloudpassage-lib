@@ -5,13 +5,18 @@
             [taoensso.carmine :as car]
             [fernet.core :as fernet-clj]
             [cloudpassage-lib.fernet :as cp-fernet]
-            [cloudpassage-lib.core :as core]))
+            [cloudpassage-lib.core :as core]
+            [manifold.deferred :as md]))
 
 (defn ^:private flush-redis! []
   (core/wcar* (car/flushall)))
 
 (deftest fetch-token!-tests
-  (let [fernet-key (fernet-clj/generate-key)]
+  (let [fernet-key (fernet-clj/generate-key)
+        succeed-get-fake-token (fn [t]
+                                 (let [d (md/deferred)]
+                                   (md/success! d t)
+                                   d))]
     (testing "encrypts new api token with fernet"
       (let [client-id "client-id"
             token-key (str "account-" client-id)
@@ -20,8 +25,8 @@
                         :token_type "bearer"
                         :access_token "12"}
             expected-token (:access_token fake-token)
-            get-fake-token (fn [_ _] fake-token)]
-        (with-redefs [core/get-auth-token! get-fake-token]
+            get-token (fn [_ _] (succeed-get-fake-token fake-token))]
+        (with-redefs [core/get-auth-token! get-token]
           (flush-redis!)
           ;; this sets and returns the token.
           ;; a side effect is the token being stored in redis
@@ -39,9 +44,7 @@
                         :access_token "12"}
             expected-token (:access_token fake-token)
             encrypted-token (cp-fernet/encrypt fernet-key expected-token)
-            get-fake-token (fn [_ _]
-                             (reset! called false)
-                             "if called, I should explode")]
+            get-fake-token (fn [_ _] (reset! called true))]
         (with-redefs [core/get-auth-token! get-fake-token]
           (flush-redis!)
           (core/wcar* (car/set token-key encrypted-token))
@@ -53,8 +56,8 @@
             fake-token {:expires_in 101
                         :token_type "bearer"
                         :access_token "12"}
-            get-fake-token (fn [_ _] fake-token)]
-        (with-redefs [core/get-auth-token! get-fake-token]
+            get-token (fn [_ _] (succeed-get-fake-token fake-token))]
+        (with-redefs [core/get-auth-token! get-token]
           (flush-redis!)
           ;; cause the caching side-effect
           (core/fetch-token! client-id "unused-secret" fernet-key)
@@ -69,9 +72,8 @@
             fake-token {:expires_in 900
                         :token_type "bearer"
                         :access_token "12"}
-
-            get-fake-token (fn [_ _] fake-token)]
-        (with-redefs [core/get-auth-token! get-fake-token]
+            get-token (fn [_ _] (succeed-get-fake-token fake-token))]
+        (with-redefs [core/get-auth-token! get-token]
           (flush-redis!)
           ;; cause the caching side-effect
           (core/fetch-token! client-id "unused-secret" fernet-key)
@@ -85,8 +87,8 @@
                         :token_type "bearer"
                         :access_token "12"}
             expected-token (:access_token fake-token)
-            get-fake-token (fn [_ _] fake-token)]
-        (with-redefs [core/get-auth-token! get-fake-token]
+            get-token (fn [_ _] (succeed-get-fake-token fake-token))]
+        (with-redefs [core/get-auth-token! get-token]
           (flush-redis!)
           ;; there is no token in redis
           (is (nil? (core/wcar* (car/get token-key)))
