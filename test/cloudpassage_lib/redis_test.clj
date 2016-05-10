@@ -3,8 +3,7 @@
             [clj-time.core :as ct]
             [clj-time.coerce :as c]
             [taoensso.carmine :as car]
-            [fernet.core :as fernet-clj]
-            [cloudpassage-lib.fernet :as cp-fernet]
+            [fernet.core :as fernet]
             [cloudpassage-lib.core :as core]
             [manifold.deferred :as md]))
 
@@ -12,7 +11,7 @@
   (core/wcar* (car/flushall)))
 
 (deftest fetch-token!-tests
-  (let [fernet-key (fernet-clj/generate-key)
+  (let [fernet-key (fernet/generate-key)
         succeed-get-fake-token (fn [t]
                                  (let [d (md/deferred)]
                                    (md/success! d t)
@@ -43,7 +42,7 @@
                         :token_type "bearer"
                         :access_token "12"}
             expected-token (:access_token fake-token)
-            encrypted-token (cp-fernet/encrypt fernet-key expected-token)
+            encrypted-token (fernet/encrypt-string fernet-key expected-token)
             get-fake-token (fn [_ _] (reset! called true))]
         (with-redefs [core/get-auth-token! get-fake-token]
           (flush-redis!)

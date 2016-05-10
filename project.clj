@@ -11,7 +11,7 @@
                  [clj-time "0.11.0"]
                  [base64-clj "0.1.1"]
                  [com.taoensso/carmine "2.12.1"]
-                 [fernet "0.1.0"]
+                 [fernet "0.2.0" :exclusions [io.netty/netty-buffer]]
                  [environ "1.0.1"]
                  [cheshire "5.5.0"]
                  [camel-snake-kebab "0.3.2"]

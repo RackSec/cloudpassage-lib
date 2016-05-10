@@ -11,7 +11,7 @@
    [base64-clj.core :as base64]
    [clj-time.core :as time]
    [clj-time.format :as f]
-   [cloudpassage-lib.fernet :as fernet]
+   [fernet.core :as fernet]
    [cloudpassage-lib.retry :as retry]
    [cheshire.core :as json]))
 
@@ -102,13 +102,13 @@
         token (wcar* (car/get account-key))]
     (if (some? token)
       ;; a token is in redis
-      (fernet/decrypt fernet-key token)
+      (fernet/decrypt-to-string fernet-key token)
       ;; no token is present, fetch a new one
       (let [new-token @(get-auth-token! client-id client-secret)
             ;; this will cause the token to expire 100 seconds earlier than expiration
             ;; it is a simple fudge factor.
             {:keys [access_token expires_in]} new-token
             ttl (- expires_in 100)
-            encrypted-token (fernet/encrypt fernet-key access_token)]
+            encrypted-token (fernet/encrypt-string fernet-key access_token)]
         (wcar* (car/setex account-key ttl encrypted-token))
         access_token))))
