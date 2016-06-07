@@ -6,7 +6,8 @@
    [manifold.deferred :as md]
    [byte-streams :as bs]
    [taoensso.carmine :as car :refer (wcar)]
-   [taoensso.timbre :as timbre :refer [info warn]]
+   [taoensso.timbre :as timbre :refer [info warn fatal]]
+   [com.gfredericks.system-slash-exit :refer [exit]]
    [base64-clj.core :as base64]
    [clj-time.core :as time]
    [clj-time.format :as f]
@@ -21,6 +22,9 @@
 (defn redis-connection
   []
   (let [{:keys [redis-url redis-timeout]} env]
+    (when-not (and redis-url redis-timeout)
+      (fatal "REDIS_URL and REDIS_TIMEOUT environment vars must be defined")
+      (exit 1))
     {:pool {}
      :spec {:uri redis-url
             :timeout (read-string redis-timeout)}}))
