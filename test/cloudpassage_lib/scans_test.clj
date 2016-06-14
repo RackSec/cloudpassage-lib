@@ -150,13 +150,13 @@
                scans))
         (is (ms/closed? scans-stream))))))
 
-(deftest scans-with-details!-tests
+(deftest resources-with-details!-tests
   (testing "Typical scan returns expected page details."
     (with-redefs [scans/get-page! fake-get-page!]
       (let [scans-stream (scans/scans! "lvh" "hunter2" {"modules" "fim"})
             scans-with-details
-            (scans/scans-with-details! "lvh" "hunter2"
-                                       :scan :scan scans-stream)
+            (scans/resources-with-details! "lvh" "hunter2"
+                                           :scan :scan scans-stream)
             scans (ms/stream->seq scans-with-details)]
         (is (= (for [scan-id (range (* fake-pages scans-per-page))]
                  {:scan-id scan-id
@@ -170,7 +170,7 @@
     (let [empty-stream (ms/stream 0)]
       (ms/close! empty-stream)
       (->> empty-stream
-           (scans/scans-with-details! '_ '_ :_ :_)
+           (scans/resources-with-details! '_ '_ :_ :_)
            ms/stream->seq
            doall))))
 
