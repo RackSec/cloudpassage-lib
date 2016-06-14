@@ -142,11 +142,13 @@
     (ms/connect-via
      resources-stream
      (fn [scan]
-       (md/chain
-        (get-page! client-id client-secret (:url scan))
-        (fn [response]
-          (ms/put! resources-with-details-stream
-                   (assoc scan resource-key (get-resource response))))))
+       (-> (get-page! client-id client-secret (:url scan))
+           (md/chain
+            (fn [response]
+              (ms/put! resources-with-details-stream
+                       (assoc scan resource-key (get-resource response)))))
+           (handle-stream-exception resources-stream
+                                    resources-with-details-stream)))
      resources-with-details-stream)
     resources-with-details-stream))
 
