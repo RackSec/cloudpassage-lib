@@ -17,6 +17,7 @@
                  [cheshire "5.6.3"]
                  [camel-snake-kebab "0.4.0"]
                  [org.clojure/math.numeric-tower "0.0.4"]
+                 [com.gfredericks/system-slash-exit "0.2.0"]
                  [com.cemerick/url "0.1.1"]]
   :plugins [[lein-auto "0.1.2"]
             [lein-cljfmt "0.3.0"]

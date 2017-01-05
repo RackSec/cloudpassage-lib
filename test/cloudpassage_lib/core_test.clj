@@ -4,7 +4,26 @@
             [manifold.time :as mt]
             [clj-time.core :as ct]
             [cheshire.core :as json]
-            [cloudpassage-lib.core :as core]))
+            [environ.core :refer [env]]
+            [cloudpassage-lib.core :as core]
+            [cloudpassage-lib.test-utils :refer [use-atom-log-appender!]]))
+
+(deftest no-redis-vars-test
+  (testing "Die when redis environment variables are not defined"
+    (let [exited (atom false)]
+      (with-redefs [env (dissoc env :redis-url :redis-timeout)
+                    com.gfredericks.system-slash-exit/exit
+                    ;; System/exit must be faked with an exception; otherwise
+                    ;; execution will not halt
+                    (fn [_] (reset! exited true)
+                      (throw (Exception. "boom dead")))]
+        (let [log (use-atom-log-appender!)]
+          (is (thrown-with-msg? Exception #"boom dead"
+                                (core/redis-connection)))
+          (is (clojure.string/includes?
+               (first @log)
+               "REDIS_URL and REDIS_TIMEOUT environment vars must be defined"))
+          (is (= true @exited)))))))
 
 (deftest get-auth-token!-tests
   (testing "returns an authentication token"
