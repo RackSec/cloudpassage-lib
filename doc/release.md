@@ -20,20 +20,7 @@ We release this software on
    [cloudpassage-lib](https://clojars.org/cloudpassage-lib) group on Clojars.
    Otherwise, you will not have the authorization to upload releases.
 
-4. You'll need to install the `lein-release` plugin by adding it to your user
-   profile. To do this, create a file `~/.lein/profiles.clj` if it doesn't
-   already exist, and update your configuration using the following snippet:
-   ```clojure
-   {:user {:plugins [[lein-release "1.0.9"]]}}
-   ```
-5. Assuming you have an up-to-date copy of the cloudpassage-lib git repository
-   checked out, you are now ready to prepare a release.
-
 ## Packaging and uploading a release
-
-We use the `lein-release` plugin to release new versions of the library. Its
-docs are a little sparse, so here are some instructions to help you prepare
-releases.
 
 1. When you are ready to release a new version of the library, you should let
    everyone else know by opening a pull request to update the change log
@@ -43,36 +30,32 @@ releases.
    By convention, the person who reviews and merges this PR will create the new
    release.
 
-   You should consider whether the release is a *minor* or *major* release.
-   Minor releases contain improvements or new API calls, and do not break or
-   change existing functionality. Major releases make "breaking" changes such
+   You should consider whether the release is a *patch*, *minor*, or *major*
+   release. Patches are small internal changes that no consumer should care
+   about. Minor releases contain improvements or new API calls, and do not break
+   or change existing functionality. Major releases make "breaking" changes such
    that consumers of the library would have to make changes their code to
-   upgrade to the new version. A minor release increments the version number by
-   0.0.1; a major release increments the version number by 0.1.0.
+   upgrade to the new version. A patch release increments the version number by
+   0.0.1; a minor release increments the version number by 0.0.1; finally, a
+   major release increments the version number by 0.1.0.
 
-2. To package and upload the release, run `lein release :minor` at the root of
-   the repository with the desired release commit checked out (usually at the
-   HEAD of the master branch on the upstream repository).
+2. Remove the word "-SNAPSHOT" from the version number in `project.clj`. And
+   bump the version identifier appropriately (e.g. if this is a major release,
+   bump 1.x.y to 2.0.0). Commit the change and create a new tag using the
+   library name and the current version number. For example, `git tag
+   cloudpassage-lib-1.0.0`
 
-   [**Note:** we encountered a bug with `lein release :major`. If you need to
-   make a major release, first manually make a commit to change the version
-   number to a SNAPSHOT of the desired major version number in the
-   `project.clj` file, and then proceed with a minor release.]
+3. run `lein deploy clojars`. You will be asked for a gpg password, your clojars
+   username, and password.
 
-   The `lein-release` plugin then completes the following actions on your
-   behalf:
+4. Bump current version numbers by a patch (x.y.z => x.y.z + 1) and add the
+   suffix `-SNAPSHOT`.
 
-   - Changes the version from `X.Y.Z-SNAPSHOT` to `X.Y.Z` in the `project.clj`
-     file and commits the change.
-   - Creates a git tag `cloudpassage-lib-X.Y.Z`.
-   - Signs and uploads the release to Clojars.
-   - Changes the version to `X.Y.(Z+1)-SNAPSHOT` and commits the change.
+5. Push the new tag and commits to master. For example,
 
-4. You now need to push the new commits and tag to the master branch on the
-   upstream repository:
+```shell
+$ git push origin cloudpassage-lib-1.0.0  # push the tag for the current release
+$ git push origin master # push the release commits
+```
 
-   ```
-   git push upstream HEAD --tags
-   ```
-
-   Congratulations! You've completed a release.
+Congratulations! You've completed a release.

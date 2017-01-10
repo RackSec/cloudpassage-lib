@@ -1,6 +1,5 @@
 (defproject cloudpassage-lib "1.0.1-SNAPSHOT"
   :description "A library for interacting with cloudpassage apis."
-  :lein-release {:deploy-via :clojars}
   :url "http://github.com/RackSec/cloudpassage-lib"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
