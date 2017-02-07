@@ -1,3 +1,7 @@
+# 1.0.1
+
+- Make logging less noisy by moving cache into to TRACE level
+
 # 1.0.0
 
 ## Breaking changes

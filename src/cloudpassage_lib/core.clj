@@ -103,11 +103,11 @@
     (if (cache/has? current-cache account-key)
       ;; if there is a token, then return it
       (let [updated-cache (swap! cache-state cache/hit account-key)]
-        (timbre/info "Cache hit" account-key)
+        (timbre/trace "Cache hit" account-key)
         (cache/lookup updated-cache account-key))
       ;; otherwise, go fetch a new one, cache it (with the default for the cache)
       ;; and return the _new_ token
       (let [{:keys [access_token]} @(get-auth-token! client-id client-secret)]
-        (timbre/info "Cache miss" account-key)
+        (timbre/trace "Cache miss" account-key)
         (swap! cache-state cache/miss account-key access_token)
         access_token))))
