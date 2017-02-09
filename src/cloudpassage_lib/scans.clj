@@ -19,6 +19,9 @@
 (def ^:private base-servers-url
   "https://api.cloudpassage.com/v1/servers/")
 
+(def ^:private base-policies-url
+  "https://api.cloudpassage.com/v1/policies/")
+
 (defn ^:private maybe-flatten-list
   [maybe-list]
   (if (or (string? maybe-list) (nil? maybe-list))
@@ -40,7 +43,7 @@
   (str (u/url base-servers-url server-id module)))
 
 (defn ^:private get-page-retry!
-  "Gets a page, and handles retries on error."
+  "Gets a page, and exponentially retries the fetch on error."
   [token url num-retries timeout]
   (let [num-tries (inc num-retries)
         get-events-page-or-throw
@@ -75,7 +78,8 @@
     (get-page-retry! token url num-retries timeout)))
 
 (defn ^:private stream-paginated-resources!
-  "Returns a stream of resources coming from a paginated list."
+  "Returns a stream of resources retrieved according to a paginated
+   chain of objects."
   [client-id client-secret initial-url resource-key]
   (let [urls-stream (ms/stream 10)
         resources-stream (ms/stream 20)]
@@ -101,38 +105,57 @@
 (defn list-servers!
   "Returns a stream of servers for the given account."
   [client-id client-secret]
-  (stream-paginated-resources! client-id client-secret base-servers-url :servers))
+  (stream-paginated-resources!
+   client-id
+   client-secret
+   base-servers-url
+   :servers))
+
+(defn list-policies!
+  "Returns a stream of policies for the given account."
+  [client-id client-secret]
+  (stream-paginated-resources!
+   client-id
+   client-secret
+   base-policies-url
+   :policies))
 
 (defn scans!
   "Returns a stream of historical scan results matching opts."
   [client-id client-secret opts]
-  (stream-paginated-resources! client-id client-secret (scans-url opts) :scans))
+  (stream-paginated-resources!
+   client-id
+   client-secret
+   (scans-url opts)
+   :scans))
 
-(defn scans-with-details!
-  "Returns a stream of historical scan results with their details.
+(defn resources-with-details!
+  "Returns a stream of resources with their details fetched.
 
   Because of the way the CloudPassage API works, you need to first
-  query the scans, and then you need to fetch the details for each
-  scan, and then you need to fetch the FIM scan details for the
-  details (iff the details are FIM). See CloudPassage API docs for
-  more illustration."
-  [client-id client-secret scans-stream]
-  (let [scans-with-details-stream (ms/stream 10)]
+  query the resource endpoint for a list of resources, and then you
+  need to fetch the details for each resource. See CloudPassage API
+  docs for more illustration."
+  [client-id client-secret resource-key get-resource resources-stream]
+  (let [resources-with-details-stream (ms/stream 10)]
     (ms/connect-via
-     scans-stream
+     resources-stream
      (fn [scan]
-       (md/chain
-        (get-page! client-id client-secret (:url scan))
-        (fn [response]
-          (ms/put! scans-with-details-stream (assoc scan :scan (:scan response))))))
-     scans-with-details-stream)
-    scans-with-details-stream))
+       (-> (get-page! client-id client-secret (:url scan))
+           (md/chain
+            (fn [response]
+              (ms/put! resources-with-details-stream
+                       (assoc scan resource-key (get-resource response)))))
+           (handle-stream-exception resources-stream
+                                    resources-with-details-stream)))
+     resources-with-details-stream)
+    resources-with-details-stream))
 
 (defn scan-each-server!
   "Fetches a new report for each server passed in via the servers-stream.
   The module determines which type of report will be fetched.
 
-  Returns a stream that will contain the a complete report for a given server."
+  Returns a stream that contains the complete report for each server."
   [client-id client-secret module servers-stream]
   (let [server-details-stream (ms/stream 10)
         scan-server! (fn [server-id module]
@@ -149,18 +172,26 @@
      server-details-stream)
     server-details-stream))
 
-(defn ^:private report-for-module!
-  "Get recent report data for a certain client, and filter based on module."
-  [client-id client-secret module-name]
+(defn ^:private generate-report!
+  "Generate a report by fetching and transforming the data, handling
+   any errors encountered."
+  [get-report-data!]
   (let [report
-        (->> (list-servers! client-id client-secret)
-             (scan-each-server! client-id client-secret module-name)
+        (->> (get-report-data!)
              (ms/map #(cske/transform-keys cskc/->kebab-case-keyword %))
              ms/stream->seq)]
     (if (some #(= % ::fetch-error) report)
       (do (error "Report failed to generate; aborting.")
           (throw (Exception. "Report failed to generate")))
       report)))
+
+(defn ^:private report-for-module!
+  "Get recent report data for a certain client, and filter based on module."
+  [client-id client-secret module-name]
+  (generate-report!
+   (fn []
+     (->> (list-servers! client-id client-secret)
+          (scan-each-server! client-id client-secret module-name)))))
 
 (defn fim-report!
   "Get the current (recent) FIM report for a particular client."
@@ -176,3 +207,15 @@
   "Get the current (recent) sca report for a particular client."
   [client-id client-secret]
   (report-for-module! client-id client-secret "sca"))
+
+(defn policies-with-details!
+  "Get the current SCA policies set for a particular client."
+  [client-id client-secret]
+  (generate-report!
+   (fn []
+     (->> (list-policies! client-id client-secret)
+          (resources-with-details!
+           client-id
+           client-secret
+           :rules
+           (comp :rules :policy))))))
