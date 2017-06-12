@@ -80,7 +80,7 @@
   [response]
   (not= ::fetch-error response))
 
-(def ^:private cache-ttl-milliseconds 8000)
+(def ^:private cache-ttl-milliseconds 480000)  ;; 8 minutes
 
 (defn ^:private build-cache
   []
