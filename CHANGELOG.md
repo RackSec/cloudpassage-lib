@@ -1,3 +1,7 @@
+# 1.1.0
+
+- Increase credential cache TTL from 8 seconds to 8 minutes
+
 # 1.0.1
 
 - Make logging less noisy by moving cache into to TRACE level
