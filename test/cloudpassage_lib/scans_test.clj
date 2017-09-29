@@ -212,9 +212,9 @@
                     (let [{:keys [path]}
                           (parse-fake-request client-id client-secret url)]
                       (case path
-                        "/v1/servers/server-1/svm" :one
-                        "/v1/servers/server-2/svm" :two
-                        "/v1/servers/server-3/svm" :three)))]
+                        "/v1/servers/server-1/svm" {:scan :one}
+                        "/v1/servers/server-2/svm" {:scan :two}
+                        "/v1/servers/server-3/svm" {:scan :three})))]
       ;; note - if the input-stream's buffer is too small; then this test will
       ;; fail. `put-all` must be able to place all elements in the stream''
       ;; buffer size is set to 2, as it will be able to fill up with 3 elements
@@ -223,7 +223,12 @@
         (ms/close! input)
         (let [scan-result (ms/stream->seq
                            (scans/scan-each-server! "lvh" "hunter2" "svm" input))]
-          (is (= [:one :two :three] scan-result)))))))
+          (is (= [{:scan :one
+                   :server {:id "server-1"}}
+                  {:scan :two
+                   :server {:id "server-2"}}
+                  {:scan :three
+                   :server {:id "server-3"}}] scan-result)))))))
 
 (defn ^:private test-report
   [report-fn! expected-module]
@@ -241,7 +246,9 @@
                       {:id "1" :scan {:i_was_a_snake_cased_keyword 42}})))]
 
     (let [report (report-fn! "lvh" "hunter2")]
-      (is (= '({:id "1" :scan {:i-was-a-snake-cased-keyword 42}}) report)))))
+      (is (= '({:id "1"
+                :scan {:i-was-a-snake-cased-keyword 42}
+                :server {:id "server-id-1"}}) report)))))
 
 (deftest fim-report!-tests
   (test-report scans/fim-report! "fim"))

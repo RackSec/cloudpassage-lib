@@ -140,11 +140,11 @@
                          (get-page! client-id client-secret url)))]
     (ms/connect-via
      servers-stream
-     (fn [{:keys [id]}]
+     (fn [{:keys [id] :as server}]
        (-> (scan-server! id module)
            (md/chain
             (fn [response]
-              (ms/put! server-details-stream response)))
+              (ms/put! server-details-stream (assoc response :server server))))
            (handle-stream-exception server-details-stream servers-stream)))
      server-details-stream)
     server-details-stream))
