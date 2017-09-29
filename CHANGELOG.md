@@ -1,3 +1,7 @@
+# 1.1.1
+
+- Include server data on each scan in the stream
+
 # 1.1.0
 
 - Increase credential cache TTL from 8 seconds to 8 minutes
