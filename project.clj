@@ -1,4 +1,4 @@
-(defproject cloudpassage-lib "1.1.1-SNAPSHOT"
+(defproject cloudpassage-lib "1.1.1"
   :description "A library for interacting with cloudpassage apis."
   :url "http://github.com/RackSec/cloudpassage-lib"
   :license {:name "Eclipse Public License"
