@@ -36,8 +36,9 @@ We release this software on
    or change existing functionality. Major releases make "breaking" changes such
    that consumers of the library would have to make changes their code to
    upgrade to the new version. A patch release increments the version number by
-   0.0.1; a minor release increments the version number by 0.0.1; finally, a
-   major release increments the version number by 0.1.0.
+   0.0.1; a minor release increments the version number by 0.1.0; finally, a
+   major release increments the version number by 1.0.0.
+
 
 2. Remove the word "-SNAPSHOT" from the version number in `project.clj`. And
    bump the version identifier appropriately (e.g. if this is a major release,
